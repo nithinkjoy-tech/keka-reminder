@@ -24,6 +24,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -50,6 +51,7 @@ DEFAULT_CONFIG = {
     "holidays": [],
     "show_dialog": True,
     "timeout_seconds": 15,
+    "idle_minutes": 5,
 }
 
 
@@ -356,11 +358,44 @@ def in_window(cfg, now=None):
     return parse_hhmm(cfg["window_start"]) <= now.time() <= parse_hhmm(cfg["window_end"])
 
 
+def idle_seconds():
+    """Seconds since the last keyboard/mouse/trackpad input."""
+    out = subprocess.run(["ioreg", "-c", "IOHIDSystem"], capture_output=True, text=True).stdout
+    for line in out.splitlines():
+        if "HIDIdleTime" in line:
+            return int(line.rsplit("=", 1)[1].strip()) / 1e9
+    return 0
+
+
+def screen_locked():
+    out = subprocess.run(["ioreg", "-n", "Root", "-d1"], capture_output=True, text=True).stdout
+    return '"CGSSessionScreenIsLocked"=Yes' in out
+
+
+def user_away(cfg):
+    return screen_locked() or idle_seconds() > cfg["idle_minutes"] * 60
+
+
+def status_with_retry(cfg, attempts=4, delay=15):
+    """Right after wake, Wi-Fi may not be back yet; retry network errors
+    for up to a minute before giving up."""
+    for attempt in range(attempts):
+        try:
+            return current_status(cfg)
+        except CheckError as e:
+            if not str(e).startswith("network error") or attempt == attempts - 1:
+                raise
+            time.sleep(delay)
+
+
 def cmd_check(cfg):
     if not in_window(cfg) or is_marked_done():
         return
+    if user_away(cfg):
+        log("user away or screen locked; skipping")
+        return
     try:
-        logged_in, _ = current_status(cfg)
+        logged_in, _ = status_with_retry(cfg)
     except CheckError as e:
         msg = str(e)
         if msg == "session expired":

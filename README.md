@@ -4,6 +4,8 @@ A macOS reminder that nags you every workday until you clock in on [Keka](https:
 
 Every 10 minutes during your reminder window, it checks your Keka attendance. If you haven't clocked in today, you get a notification (click it to open Keka) and a dialog. Once it sees a clock-in, it stays quiet until the next workday.
 
+Reminders only appear while you're using the Mac. Nothing runs while it's asleep, and checks are skipped while the screen is locked or you're away, so you don't come back to a pile of notifications.
+
 If the check fails (expired session, no network), it still reminds you, so a broken check never means a missed clock-in.
 
 > **Unofficial.** This tool isn't affiliated with Keka. It uses your own login session to read your own attendance. Check that your company's IT policy allows this before using it.
@@ -28,6 +30,7 @@ Edit `config.json` before installing:
 | `workdays` | `0` = Monday ... `6` = Sunday. Default is Monday to Friday |
 | `holidays` | Dates to skip, e.g. `["2026-12-25"]` |
 | `show_dialog` | `true` to also show a dialog with an **Open Keka** button |
+| `idle_minutes` | Skip reminders while the screen is locked or you've been idle this long (default `5`) |
 
 Leave `token_url` and `attendance_path` as they are.
 
