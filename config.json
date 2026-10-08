@@ -1,0 +1,18 @@
+{
+  "base_url": "https://cloverbay.keka.com",
+  "attendance_path": "/k/dashboard/api/mytime/attendance/attendancedayrequests",
+  "token_url": "https://app.keka.com/connect/token",
+  "client_id": "987cc971-fc22-4454-99f9-16c078fa7ff6",
+  "workdays": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "window_start": "09:30",
+  "window_end": "13:00",
+  "holidays": [],
+  "show_dialog": true,
+  "timeout_seconds": 15
+}
