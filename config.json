@@ -15,5 +15,10 @@
   "holidays": [],
   "show_dialog": true,
   "timeout_seconds": 15,
-  "idle_minutes": 5
+  "idle_minutes": 5,
+  "sounds": {
+    "reminder": "default",
+    "expired": "Basso",
+    "error": "Funk"
+  }
 }

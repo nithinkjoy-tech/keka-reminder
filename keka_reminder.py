@@ -11,7 +11,8 @@ Commands:
   status       print today's clock-in state (no notification)
   set-tokens   store tokens in the macOS Keychain: `set-tokens <refresh_token>`,
                or no argument to be prompted
-  test-notify  send a test notification
+  test-notify  send a test notification; `test-notify expired|error` to hear
+               the other sounds
   done         mark today as done manually (stops reminders today)
   skip         same as done, for leave/holidays
   reset        clear today's manual done/skip
@@ -52,6 +53,7 @@ DEFAULT_CONFIG = {
     "show_dialog": True,
     "timeout_seconds": 15,
     "idle_minutes": 5,
+    "sounds": {"reminder": "default", "expired": "Basso", "error": "Funk"},
 }
 
 
@@ -141,17 +143,29 @@ def _terminal_notifier():
     return None
 
 
-def notify(title, message, open_url=None):
+def _system_alert_sound():
+    """Name of the alert sound chosen in System Settings > Sound, for the
+    osascript fallback, which has no "default" option."""
+    r = subprocess.run(["defaults", "read", "-g", "com.apple.sound.beep.sound"], capture_output=True, text=True)
+    name = os.path.splitext(os.path.basename(r.stdout.strip()))[0]
+    return name or "Glass"
+
+
+def notify(title, message, open_url=None, sound="default"):
     """Clicking the notification opens open_url when terminal-notifier is
-    installed and allowed; otherwise falls back to a plain notification."""
+    installed and allowed; otherwise falls back to a plain notification.
+    sound is "default" or a name from /System/Library/Sounds."""
     tn = _terminal_notifier()
     if tn:
-        args = [tn, "-title", title, "-message", message, "-sound", "Glass", "-group", "keka-reminder"]
+        args = [tn, "-title", title, "-message", message, "-sound", sound, "-group", "keka-reminder"]
         if open_url:
             args += ["-open", open_url]
         if subprocess.run(args, capture_output=True).returncode == 0:
             return
-    script = f"display notification {_osa_quote(message)} with title {_osa_quote(title)} sound name \"Glass\""
+    script = (
+        f"display notification {_osa_quote(message)} with title {_osa_quote(title)} "
+        f"sound name {_osa_quote(_system_alert_sound() if sound == 'default' else sound)}"
+    )
     subprocess.run(["osascript", "-e", script], capture_output=True)
 
 
@@ -169,9 +183,11 @@ def dialog(message, cfg):
     return out.split("button returned:")[-1].split(",")[0].strip()
 
 
-def nudge(cfg, message):
-    log(f"nudge: {message}")
-    notify("Keka: clock in", f"{message} Click to open Keka.", open_url=cfg["base_url"])
+def nudge(cfg, message, kind="reminder"):
+    """kind picks the sound from cfg["sounds"]: reminder, expired or error."""
+    log(f"nudge ({kind}): {message}")
+    sound = cfg["sounds"].get(kind, "default")
+    notify("Keka: clock in", f"{message} Click to open Keka.", open_url=cfg["base_url"], sound=sound)
     if not cfg.get("show_dialog"):
         return
     choice = dialog(message, cfg)
@@ -399,9 +415,9 @@ def cmd_check(cfg):
     except CheckError as e:
         msg = str(e)
         if msg == "session expired":
-            nudge(cfg, "Keka session expired. Clock in, then run: keka set-tokens <refresh_token>")
+            nudge(cfg, "Keka session expired. Clock in, then run: keka set-tokens <refresh_token>", kind="expired")
         else:
-            nudge(cfg, f"Couldn't verify your clock-in ({msg}). Have you clocked in?")
+            nudge(cfg, f"Couldn't verify your clock-in ({msg}). Have you clocked in?", kind="error")
         return
     if logged_in:
         mark_done("api")
@@ -518,7 +534,10 @@ def main():
     elif cmd == "set-tokens":
         cmd_set_tokens(cfg, sys.argv[2] if len(sys.argv) > 2 else None)
     elif cmd == "test-notify":
-        notify("Keka: clock in", "Test notification. Click to open Keka.", open_url=cfg["base_url"])
+        kind = sys.argv[2] if len(sys.argv) > 2 else "reminder"
+        sound = cfg["sounds"].get(kind, "default")
+        notify("Keka: clock in", f"Test {kind} notification ({sound} sound). Click to open Keka.",
+               open_url=cfg["base_url"], sound=sound)
     elif cmd in ("done", "skip"):
         mark_done(cmd)
         print(f"marked {cmd} for {today()}")

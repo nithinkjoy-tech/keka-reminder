@@ -30,6 +30,7 @@ Edit `config.json` before installing:
 | `workdays` | `0` = Monday ... `6` = Sunday. Default is Monday to Friday |
 | `holidays` | Dates to skip, e.g. `["2026-12-25"]` |
 | `show_dialog` | `true` to also show a dialog with an **Open Keka** button |
+| `sounds` | Sound per reminder type: `reminder`, `expired`, `error`. Use `default` or a name from `/System/Library/Sounds` (Basso, Funk, Hero, Ping, ...) |
 | `idle_minutes` | Skip reminders while the screen is locked or you've been idle this long (default `5`) |
 
 Leave `token_url` and `attendance_path` as they are.
@@ -103,7 +104,7 @@ Without terminal-notifier, you get standard macOS notifications, which can't ope
 | `keka skip` | No reminders today (leave, holidays) |
 | `keka done` | Marks today as done manually |
 | `keka reset` | Undoes `skip` or `done` for today |
-| `keka test-notify` | Sends a test notification |
+| `keka test-notify [reminder\|expired\|error]` | Sends a test notification with that type's sound |
 
 ## Finding your client_id
 
